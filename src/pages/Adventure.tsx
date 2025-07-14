@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { stages, Stage } from '../data/stages';
 import { useProgress } from '../hooks/useProgress';
@@ -13,12 +13,20 @@ const Adventure: React.FC = () => {
   const [currentTask, setCurrentTask] = useState(0);
   const [completedTasks, setCompletedTasks] = useState<number[]>([]);
 
-  // Update stage unlock logic
+  // Reset completedTasks when stage is closed
+  useEffect(() => {
+    if (!selectedStage) {
+      setCompletedTasks([]);
+    }
+  }, [selectedStage]);
+
   const getUnlockedStages = () => {
     const updatedStages = stages.map((stage, index) => ({
       ...stage,
-      unlocked: index === 0 || progress.completedStages.includes(stages[index - 1].id),
-      completed: progress.completedStages.includes(stage.id)
+      unlocked:
+        index === 0 ||
+        (stages[index - 1] && progress.completedStages.includes(stages[index - 1].id)),
+      completed: progress.completedStages.includes(stage.id),
     }));
     return updatedStages;
   };
@@ -31,14 +39,13 @@ const Adventure: React.FC = () => {
 
   const handleCompleteTask = () => {
     if (!selectedStage) return;
-    
-    const newCompletedTasks = [...completedTasks, currentTask];
+
+    const newCompletedTasks = Array.from(new Set([...completedTasks, currentTask]));
     setCompletedTasks(newCompletedTasks);
-    
+
     if (currentTask < selectedStage.tasks.length - 1) {
       setCurrentTask(currentTask + 1);
     } else {
-      // All tasks completed
       completeStage(selectedStage.id, selectedStage.xp);
       setSelectedStage(null);
     }
@@ -98,7 +105,9 @@ const Adventure: React.FC = () => {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-6">
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedStage.title}</h2>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                        {selectedStage.title}
+                      </h2>
                       <p className="text-gray-600">{selectedStage.description}</p>
                     </div>
                     <Button onClick={() => setSelectedStage(null)} variant="secondary" size="sm">
@@ -134,12 +143,16 @@ const Adventure: React.FC = () => {
                   </div>
 
                   <div className="mb-6">
-                    <CodeEditor
-                      initialCode={selectedStage.codeTemplate}
-                      onSave={handleSaveCode}
-                      onRun={handleRunCode}
-                      language="javascript"
-                    />
+                    {selectedStage.codeTemplate ? (
+                      <CodeEditor
+                        initialCode={selectedStage.codeTemplate}
+                        onSave={handleSaveCode}
+                        onRun={handleRunCode}
+                        language="javascript"
+                      />
+                    ) : (
+                      <p className="text-red-500">No code template provided.</p>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -189,7 +202,9 @@ const Adventure: React.FC = () => {
               <p className="text-sm">Completed</p>
             </div>
             <div className="bg-white bg-opacity-20 rounded-xl p-4">
-              <p className="text-2xl font-bold">{stages.length - progress.completedStages.length}</p>
+              <p className="text-2xl font-bold">
+                {stages.length - progress.completedStages.length}
+              </p>
               <p className="text-sm">Remaining</p>
             </div>
           </div>
